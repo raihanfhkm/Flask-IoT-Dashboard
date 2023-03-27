@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 logged_in = {}
 api_loggers = {}
-mydb = database.db('aman', '127.0.0.1', 'hacker123', 'ARMS')
+mydb = database.db('root', 'localhost', '', 'ARMS')
 
 #test api key aGFja2luZ2lzYWNyaW1lYXNmc2FmZnNhZnNhZmZzYQ==
 
@@ -26,7 +26,7 @@ def login():
         else:
             error = "invalid Username or Passowrd"
        
-    return render_template('Login.htm', error=error)
+    return render_template('login.html', error=error)
     
 #this links is for device 1 
 @app.route('/device1/<string:username>/<string:session>', methods=["GET", "POST"])
@@ -67,7 +67,7 @@ def overview(username, session):
             "deviceID": "Device1"
             }
         ]
-        return render_template('overview.htm', title='Overview', user=user, devices=devices)
+        return render_template('overview.html', title='Overview', user=user, devices=devices)
     
     else:
         return redirect('/login')
@@ -330,4 +330,4 @@ def decode(base64_message):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port = "80", debug=True)
+    app.run(host="localhost", port = "8000", debug=True)

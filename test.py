@@ -3,7 +3,7 @@ password = sha.hash("password123")
 print(password)
 from database import db
 
-mydb = db('aman', '127.0.0.1', 'hacker123', 'ARMS')
+mydb = db('root', 'localhost', '', 'ARMS')
 query = "update users set password = '{}' where username = 'amansingh'".format(password)
 
 mydb.cursor.execute(query)

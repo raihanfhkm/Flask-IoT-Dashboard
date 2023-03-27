@@ -1,12 +1,12 @@
 from database import db
 import hashlib
-from passlib.hash import sha512_crypt as sha
+from passlib.hash import md5_crypt as sha
 from datetime import datetime
 
 class user:
 
     def __init__(self, username, password):
-        self.db = db('aman', '127.0.0.1', 'hacker123', 'ARMS')
+        self.db = db('root', 'localhost', '', 'ARMS')
         self.username = username 
         self.secret = password
         self.authenticated = False
@@ -20,6 +20,7 @@ class user:
             query = 'select password from users where username = "{0}"'.format(self.username)
             self.db.cursor.execute(query)
             output = self.db.cursor.fetchall()
+            
             if sha.verify(self.secret, output[0][0]):
                 self.authenticated = True
                 
