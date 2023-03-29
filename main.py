@@ -52,7 +52,7 @@ def Dashoboard():
 # this link is for the main dashboard of the website
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    return render_template('home.htm', title='HOME - Landing Page')
+    return render_template('home.html', title='HOME - Landing Page')
 
 
 @app.route('/overview/<string:username>/<string:session>', methods=['GET', 'POST'])
