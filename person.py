@@ -3,28 +3,32 @@ import hashlib
 from passlib.hash import md5_crypt as sha
 from datetime import datetime
 
+
 class user:
 
     def __init__(self, username, password):
         self.db = db('root', 'localhost', '', 'ARMS')
-        self.username = username 
+        self.username = username
         self.secret = password
         self.authenticated = False
         self.auth()
         self.get_details()
         self.get_devices()
+        print(self.secret)
 
-    def auth (self):
-        #this is the place where user will get authenticated
+    def auth(self):
+        # this is the place where user will get authenticated
         try:
-            query = 'select password from users where username = "{0}"'.format(self.username)
+            query = 'select password from users where username = "{0}"'.format(
+                self.username)
             self.db.cursor.execute(query)
             output = self.db.cursor.fetchall()
-            
+
             if sha.verify(self.secret, output[0][0]):
                 self.authenticated = True
-                
-                query = 'update users set last_login = now() where username = "{0}";'.format(self.username)
+
+                query = 'update users set last_login = now() where username = "{0}";'.format(
+                    self.username)
                 self.db.cursor.execute(query)
                 self.db.db.commit()
 
@@ -37,11 +41,12 @@ class user:
             print("[ERROR!]")
             print(e)
 
-    def get_details (self):
-        
+    def get_details(self):
+
         try:
             if self.authenticated:
-                query = 'select * from users where username = "{0}"'.format(self.username)
+                query = 'select * from users where username = "{0}"'.format(
+                    self.username)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
                 output = output[0]
@@ -60,12 +65,13 @@ class user:
         except Exception as e:
             print("ERROR!")
             print(e)
-    
+
     def get_devices(self):
 
         try:
             if self.authenticated:
-                query = 'select deviceID from Node where username = "{0}"'.format(self.username)
+                query = 'select deviceID from Node where username = "{0}"'.format(
+                    self.username)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
                 dummy = []
@@ -78,14 +84,15 @@ class user:
 
         except Exception as e:
             print("[Error!]")
-            print (e)
+            print(e)
 
     def dev_info(self, deviceID):
         try:
-            
+
             if self.authenticated:
                 self.db.db.commit()
-                query = 'select * from Node where deviceID="{0}";'.format(deviceID)
+                query = 'select * from Node where deviceID="{0}";'.format(
+                    deviceID)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
                 print(output)
@@ -96,12 +103,13 @@ class user:
         except Exception as e:
             print('[ERROR!]')
             print(e)
-    
+
     def field_values(self, fieldname):
-        #here we will access all the values of devices according to time
+        # here we will access all the values of devices according to time
         try:
             if self.authenticated:
-                query = 'select * from (select * from {0} order by date_time desc limit 10) dummy order by date_time asc;'.format(fieldname)
+                query = 'select * from (select * from {0} order by date_time desc limit 10) dummy order by date_time asc;'.format(
+                    fieldname)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
                 return output
@@ -114,7 +122,8 @@ class user:
     def device_values(self, fieldname, deviceID):
         try:
             if self.authenticated:
-                query = 'select * from (select * from (select * from {0} where deviceID = "{1}") var1 order by date_time desc limit 10) dummy order by date_time asc;'.format(fieldname, deviceID)
+                query = 'select * from (select * from (select * from {0} where deviceID = "{1}") var1 order by date_time desc limit 10) dummy order by date_time asc;'.format(
+                    fieldname, deviceID)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
                 # print(output)
@@ -126,7 +135,7 @@ class user:
             print('[ERROR!]')
             print(e)
 
-#testing side for the class
+# testing side for the class
 # test = user("hellboy", "hello world")
 # test.get_details()
 # print(test.get_devices())
