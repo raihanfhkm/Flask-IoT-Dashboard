@@ -56,6 +56,7 @@ class user:
                 self.phone = output[5]
                 self.last_login = output[6].strftime("%d-%b-%Y (%H:%M:%S.%f)")
                 self.api = output[7]
+                self.deviceid = output[8]
                 return True
 
             else:

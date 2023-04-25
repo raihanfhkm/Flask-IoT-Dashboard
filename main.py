@@ -7,14 +7,96 @@ from datetime import datetime
 import person
 import os
 import binascii
+import eventlet
+import json
+from flask_mqtt import Mqtt
+from flask_socketio import SocketIO
+from Cryptodome.Cipher import AES  # from pycryptodomex v-3.10.4
+from Cryptodome.Random import get_random_bytes
+
+IV_LENGTH = 16
+
+
+def pad(s): return s + (IV_LENGTH - len(s) %
+                        IV_LENGTH) * chr(IV_LENGTH - len(s) % IV_LENGTH)
+
+
+def unpad(s): return s[0:-ord(s[-1:])]
+
+
+eventlet.monkey_patch()
+
 
 app = Flask(__name__)
-
+# app.config['SECRET'] = ''
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['MQTT_BROKER_URL'] = 'test.mosquitto.org'
+app.config['MQTT_BROKER_PORT'] = 1883
+app.config['MQTT_USERNAME'] = ''
+app.config['MQTT_PASSWORD'] = ''
+app.config['MQTT_KEEPALIVE'] = 5
+app.config['MQTT_TLS_ENABLED'] = False
 logged_in = {}
 api_loggers = {}
-mydb = database.db('root', 'localhost', '', 'ARMS')
-
+mydb = database.db('root', 'localhost', '', 'arms')
 # test api key aGFja2luZ2lzYWNyaW1lYXNmc2FmZnNhZnNhZmZzYQ==
+mqtt = Mqtt(app)
+socketio = SocketIO(app)
+iv = get_random_bytes(16)
+msg = {}
+
+
+@mqtt.on_connect()
+def handle_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected - rc:", rc)
+        mqtt.subscribe('humi')
+
+
+@mqtt.on_message()
+def handle_mqtt_message(client, userdata, message):
+    # data = dict(
+    #     topic=message.topic,
+    #     payload=message.payload.decode()
+    # )
+    topic = message.topic
+    secret_key = bytes("mysecretpassword", encoding='utf-8')
+    if topic == 'humi':
+        decoded = base64.b64decode(message.payload)
+        iv = decoded[:AES.block_size]
+        cipher = AES.new(secret_key, AES.MODE_CBC, iv)
+        original_bytes = unpad(cipher.decrypt(decoded[16:]))
+        msg = original_bytes.decode()
+        device = 'ARMS12012'
+        query = 'update node set humidity={} where deviceID="{}";'.format(
+            msg, device)
+        mydb.cursor.execute(query)
+        mydb.db.commit()
+        print(msg)
+    if topic == 'temp':
+        decoded = base64.b64decode(message.payload)
+        iv = decoded[:AES.block_size]
+        cipher = AES.new(secret_key, AES.MODE_CBC, iv)
+        original_bytes = unpad(cipher.decrypt(decoded[16:]))
+        msg = original_bytes.decode()
+        device = 'ARMS12012'
+        query = 'update node set temp={} where deviceID="{}";'.format(
+            msg, device)
+        mydb.cursor.execute(query)
+        mydb.db.commit()
+        print(msg)
+    if topic == 'light':
+        decoded = base64.b64decode(message.payload)
+        iv = decoded[:AES.block_size]
+        cipher = AES.new(secret_key, AES.MODE_CBC, iv)
+        original_bytes = unpad(cipher.decrypt(decoded[16:]))
+        msg = original_bytes.decode()
+        device = 'ARMS12012'
+        query = 'update node set light={} where deviceID="{}";'.format(
+            msg, device)
+        mydb.cursor.execute(query)
+        mydb.db.commit()
+        print(msg)
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -46,6 +128,7 @@ def Dashoboard():
          "deviceID": "Device1"
          }
     ]
+
     return render_template('device_dashboard.htm', title='Dashobard', user=user, devices=devices)
 
 
@@ -59,16 +142,14 @@ def home():
 def overview(username, session):
 
     global logged_in
-
     if username in logged_in and (logged_in[username]['object'].session_id == session):
         user = {
             "username": username,
             "nama": logged_in[username]["object"].first + " " + logged_in[username]["object"].last,
             "image": "/static/images/amanSingh.jpg",
             "api": logged_in[username]["object"].api,
-            "session": session
+            "session": session,
         }
-
         return render_template('overview.html', title='Overview - Dashboard', user=user)
 
     else:
