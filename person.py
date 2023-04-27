@@ -71,7 +71,7 @@ class user:
 
         try:
             if self.authenticated:
-                query = 'select deviceID from Node where username = "{0}"'.format(
+                query = 'select deviceID from node where username = "{0}"'.format(
                     self.username)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
@@ -92,7 +92,7 @@ class user:
 
             if self.authenticated:
                 self.db.db.commit()
-                query = 'select * from Node where deviceID="{0}";'.format(
+                query = 'select * from node where deviceID="{0}";'.format(
                     deviceID)
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()

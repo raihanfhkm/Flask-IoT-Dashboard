@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, redirect, request
+from flask import Flask, render_template, jsonify, redirect, request, flash, url_for
 import json
 import database
 import base64
@@ -9,6 +9,7 @@ import os
 import binascii
 import eventlet
 import json
+from passlib.hash import md5_crypt as sha
 from flask_mqtt import Mqtt
 from flask_socketio import SocketIO
 from Cryptodome.Cipher import AES  # from pycryptodomex v-3.10.4
@@ -29,6 +30,7 @@ eventlet.monkey_patch()
 
 app = Flask(__name__)
 # app.config['SECRET'] = ''
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['MQTT_BROKER_URL'] = 'test.mosquitto.org'
 app.config['MQTT_BROKER_PORT'] = 1883
@@ -109,30 +111,52 @@ def login():
             logged_in[user.username] = {"object": user}
             return redirect('/overview/{}/{}'.format(request.form['username'], user.session_id))
         else:
-            error = "invalid Username or Passowrd"
+            error = "invalid Username or Password"
 
     return render_template('login.html', error=error)
 
-# this links is for device 1
+
+@app.route("/settings/<string:username>/<string:session>", methods=['GET', 'POST'])
+def settings(username, session):
+
+    global logged_in
+    if username in logged_in and (logged_in[username]['object'].session_id == session):
+        user = {
+            "username": username,
+            "nama": logged_in[username]["object"].first + " " + logged_in[username]["object"].last,
+            "image": "/static/images/amanSingh.jpg",
+            "api": logged_in[username]["object"].api,
+            "session": session,
+            "deviceid": logged_in[username]["object"].deviceid
+        }
+    return render_template('settings.html', submenu='settings', user=user)
 
 
-@app.route('/device1/<string:username>/<string:session>', methods=["GET", "POST"])
-def Dashoboard():
-    user = {
-        "username": "Aman Singh",
-        "image": "static/images/amanSingh.jpg"
-    }
+@app.route("/register", methods=['GET', 'POST'])
+def register():
+    error = ""
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        first = request.form['first']
+        last = request.form['last']
+        email = request.form['email']
+        phone_number = request.form['email']
+        deviceid = 'ARMS12012'
+        encrypt = sha.encrypt(password)
+        if not (username or password or first or last or email or phone_number):
+            error = "please, fill all fields!"
+        else:
+            query = "insert into users (username, password, first_name, last_name, email, phone_number, last_login, deviceid) values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', now(), '{6}');".format(
+                username, encrypt, first, last, email, phone_number, deviceid)
+            # print(query)
+            mydb.cursor.execute(query)
+            mydb.db.commit()
+            flash("Register Sukses!")
+            return redirect(url_for('login'))
+    return render_template('register.html', error=error)
 
-    devices = [
-        {"Dashboard": "device1",
-         "deviceID": "Device1"
-         }
-    ]
 
-    return render_template('device_dashboard.htm', title='Dashobard', user=user, devices=devices)
-
-
-# this link is for the main dashboard of the website
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return render_template('home.html', title='HOME - Landing Page')
@@ -149,8 +173,9 @@ def overview(username, session):
             "image": "/static/images/amanSingh.jpg",
             "api": logged_in[username]["object"].api,
             "session": session,
+            "deviceid": logged_in[username]["object"].deviceid
         }
-        return render_template('overview.html', title='Overview - Dashboard', user=user)
+        return render_template('overview.html', title='Overview - Dashboard', user=user, submenu='overview')
 
     else:
         return redirect('/login')
@@ -260,36 +285,25 @@ def listdevices(apikey):
 randlist = [i for i in range(0, 100)]
 
 
-@app.route('/api/<string:apikey>/deviceinfo/<string:deviceID>', methods=['GET', 'POST'])
-def device_info(apikey, deviceID):
-    global api_loggers
+@app.route('/user/<string:username>/deviceinfo/<string:deviceID>', methods=['GET', 'POST'])
+def device_info(username, deviceID):
+
     global mydb
-    if not (apikey in api_loggers):
+    if deviceID != '':
         try:
-            query = "select username from users where api_key = '{}'".format(
-                apikey)
-            mydb.cursor.execute(query)
-            username = mydb.cursor.fetchall()
-            username = username[0][0]
-            apiuser = person.user(username, "dummy")
+            apiuser = person.user(username, "")
             apiuser.authenticated = True
             data = apiuser.dev_info(deviceID)
-            api_loggers[apikey] = {"object": apiuser}
             # this part is hard coded so remove after fixing the issue
             data = list(data)
-            data[2] = "Rosegarden"
             return jsonify(data)
         except Exception as e:
             print(e)
-            return jsonify({"data": "Oops Looks like api is not correct"})
+            return jsonify({"data": "data tidak ditemukan"})
 
     else:
-        data = api_loggers[apikey]["object"].dev_info(deviceID)
-
         # this part is hard coded so remove after fixing the issue
-        data = list(data)
-        data[2] = "Rosegarden"
-        return jsonify(data)
+        return jsonify({"data": "device id kosong"})
 
 
 @app.route('/api/<string:apikey>/fieldstat/<string:fieldname>', methods=['GET', 'POST'])
