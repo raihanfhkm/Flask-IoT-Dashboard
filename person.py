@@ -7,7 +7,7 @@ from datetime import datetime
 class user:
 
     def __init__(self, username, password):
-        self.db = db('root', 'localhost', '', 'ARMS')
+        self.db = db('root', '127.0.0.1', '', 'ARMS')
         self.username = username
         self.secret = password
         self.authenticated = False
@@ -50,17 +50,16 @@ class user:
                 self.db.cursor.execute(query)
                 output = self.db.cursor.fetchall()
                 output = output[0]
-                self.first = output[2]
-                self.last = output[3]
-                self.email = output[4]
-                self.phone = output[5]
-                self.last_login = output[6].strftime("%d-%b-%Y (%H:%M:%S.%f)")
-                self.api = output[7]
+                self.first = output[3]
+                self.last = output[4]
+                self.email = output[5]
+                self.phone = output[6]
+                self.last_login = output[7].strftime("%d-%b-%Y (%H:%M:%S.%f)")
                 self.deviceid = output[8]
                 return True
 
             else:
-                print("User not logged in!")
+                print(" xflogged in!")
                 return False
 
         except Exception as e:

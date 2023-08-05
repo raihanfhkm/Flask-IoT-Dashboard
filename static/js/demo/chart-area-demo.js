@@ -14,14 +14,11 @@ function getdevice(){
         var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
         addData(temp_chart, time, result[3]);
         addData(humid_chart, time, result[4]);
-        addData(light_chart, time, result[6]);
         document.getElementById("card-temp").innerHTML = result[3] + "&deg;C";
-        document.getElementById("card-humidity").innerHTML = result[5];
-        document.getElementById("card-light").innerHTML = result[6];
+        document.getElementById("card-humidity").innerHTML = result[4] + "%";
         if (couter >= 10 ){
             removeData(temp_chart);
             removeData(humid_chart);
-            removeData(light_chart);
         }
         couter++;
 
@@ -81,48 +78,6 @@ var humid_chart = new Chart(humidity, {
       labels: [],
       datasets: [{
           label: 'Humidity ',
-          data: [],
-          fill:true,
-          lineTension: 0.3,
-          backgroundColor: "rgba(33, 150, 243, 0.1)",
-          borderColor: "rgba(33, 150, 243, 1)",
-          pointRadius: 3,
-          pointBackgroundColor: "rgba(78, 115, 223, 1)",
-          pointBorderColor: "rgba(78, 115, 223, 1)",
-          pointHoverRadius: 3,
-          pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
-          pointHoverBorderColor: "rgba(78, 115, 223, 1)",
-          pointHitRadius: 10,
-          pointBorderWidth: 2,
-      }]
-  },
-  options: {
-    maintainAspectRatio: false,
-    layout: {
-      padding: {
-        left: 10,
-        right: 25,
-        top: 25,
-        bottom: 0
-      }
-    },
-      scales: {
-          yAxes: [{
-              ticks: {
-                  beginAtZero: true
-              }
-          }]
-      }
-  }
-});
-
-var light = document.getElementById('light');
-var light_chart = new Chart(light, {
-  type: 'line',
-  data: {
-      labels: [],
-      datasets: [{
-          label: 'Light Intensity',
           data: [],
           fill:true,
           lineTension: 0.3,

@@ -27,7 +27,6 @@ def unpad(s): return s[0:-ord(s[-1:])]
 
 eventlet.monkey_patch()
 
-
 app = Flask(__name__)
 # app.config['SECRET'] = ''
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
@@ -36,69 +35,86 @@ app.config['MQTT_BROKER_URL'] = 'test.mosquitto.org'
 app.config['MQTT_BROKER_PORT'] = 1883
 app.config['MQTT_USERNAME'] = ''
 app.config['MQTT_PASSWORD'] = ''
-app.config['MQTT_KEEPALIVE'] = 5
+app.config['MQTT_REFRESH_TIME'] = 1.0
 app.config['MQTT_TLS_ENABLED'] = False
 logged_in = {}
 api_loggers = {}
-mydb = database.db('root', 'localhost', '', 'arms')
+mydb = database.db('root', '127.0.0.1', '', 'arms')
 # test api key aGFja2luZ2lzYWNyaW1lYXNmc2FmZnNhZnNhZmZzYQ==
 mqtt = Mqtt(app)
 socketio = SocketIO(app)
-iv = get_random_bytes(16)
+secret_key = bytes("mysecretpassword", encoding='utf-8')
 msg = {}
 
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flags, rc):
-    if rc == 0:
-        print("Connected - rc:", rc)
-        mqtt.subscribe('humi')
+    mqtt.subscribe('/humidity/TA')
+    mqtt.subscribe('/temperature/TA')
+    # mqtt.subscribe('/light/TA')
 
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
-    # data = dict(
-    #     topic=message.topic,
-    #     payload=message.payload.decode()
-    # )
     topic = message.topic
-    secret_key = bytes("mysecretpassword", encoding='utf-8')
-    if topic == 'humi':
-        decoded = base64.b64decode(message.payload)
-        iv = decoded[:AES.block_size]
+    payload = message.payload
+    # decoded = base64.b64decode(message.payload)
+    # iv = decoded[:AES.block_size]
+    # cipher = AES.new(secret_key, AES.MODE_CBC, iv)
+    # original_bytes = unpad(cipher.decrypt(decoded[16:]))
+    # msg = original_bytes.decode()
+
+    # if topic == 'humi':
+    #     device = 'ARMS12012'
+    #     query = 'update node set humidity={} where deviceID="{}";'.format(
+    #         msg, device)
+    #     mydb.cursor.execute(query)
+    #     mydb.db.commit()
+    #     print(msg)
+    # elif topic == 'temp':
+    #     device = 'ARMS12012'
+    #     query = 'update node set temp={} where deviceID="{}";'.format(
+    #         msg, device)
+    #     mydb.cursor.execute(query)
+    #     mydb.db.commit()
+    #     print(msg)
+    # elif topic == 'light':
+    #     device = 'ARMS12012'
+    #     query = 'update node set light={} where deviceID="{}";'.format(
+    #         msg, device)
+    #     mydb.cursor.execute(query)
+    #     mydb.db.commit()
+    #     print(msg)
+    # else:
+    #     print('error')
+    # secret_key = b"mysecretpassword"
+
+    if topic == '/humidity/TA' or topic == '/temperature/TA' or topic == '/light/TA':
+        if topic == '/humidity/TA':
+            code = 'humidity'
+        elif topic == '/temperature/TA':
+            code = 'temperature'
+        elif topic == '/light/TA':
+            code = 'light'
+
+        decoded = base64.b64decode(payload)
+        iv = decoded[:IV_LENGTH]
+        print(decode)
+        encrypted_payload = decoded[IV_LENGTH:]
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
-        original_bytes = unpad(cipher.decrypt(decoded[16:]))
-        msg = original_bytes.decode()
+        decrypted_payload = unpad(cipher.decrypt(encrypted_payload))
+        msg = decrypted_payload.decode()
+        print(f"Received message from {topic}: {msg}")
+        # print(msg)
+        # print(decode)
         device = 'ARMS12012'
-        query = 'update node set humidity={} where deviceID="{}";'.format(
-            msg, device)
-        mydb.cursor.execute(query)
-        mydb.db.commit()
-        print(msg)
-    if topic == 'temp':
-        decoded = base64.b64decode(message.payload)
-        iv = decoded[:AES.block_size]
-        cipher = AES.new(secret_key, AES.MODE_CBC, iv)
-        original_bytes = unpad(cipher.decrypt(decoded[16:]))
-        msg = original_bytes.decode()
-        device = 'ARMS12012'
-        query = 'update node set temp={} where deviceID="{}";'.format(
-            msg, device)
-        mydb.cursor.execute(query)
-        mydb.db.commit()
-        print(msg)
-    if topic == 'light':
-        decoded = base64.b64decode(message.payload)
-        iv = decoded[:AES.block_size]
-        cipher = AES.new(secret_key, AES.MODE_CBC, iv)
-        original_bytes = unpad(cipher.decrypt(decoded[16:]))
-        msg = original_bytes.decode()
-        device = 'ARMS12012'
-        query = 'update node set light={} where deviceID="{}";'.format(
-            msg, device)
-        mydb.cursor.execute(query)
-        mydb.db.commit()
-        print(msg)
+
+        if msg != '':
+            query = 'UPDATE node SET {} = %s WHERE deviceID = %s'.format(code)
+            mydb.cursor.execute(query, (msg, device))
+            mydb.db.commit()
+        else:
+            print("Empty message. Skipping database update.")
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -141,7 +157,7 @@ def register():
         first = request.form['first']
         last = request.form['last']
         email = request.form['email']
-        phone_number = request.form['email']
+        phone_number = request.form['phone']
         deviceid = 'ARMS12012'
         encrypt = sha.encrypt(password)
         if not (username or password or first or last or email or phone_number):
@@ -171,7 +187,6 @@ def overview(username, session):
             "username": username,
             "nama": logged_in[username]["object"].first + " " + logged_in[username]["object"].last,
             "image": "/static/images/amanSingh.jpg",
-            "api": logged_in[username]["object"].api,
             "session": session,
             "deviceid": logged_in[username]["object"].deviceid
         }
@@ -441,4 +456,5 @@ def decode(base64_message):
 
 
 if __name__ == "__main__":
+    mqtt.init_app(app)
     app.run(host="localhost", port="8000", debug=True)
